@@ -29,15 +29,15 @@ Adafruit_ADS1115 ads;
 const float ADS1115_VOLT_PAR_BIT = 0.000125; 
 
 // --- Paramètres de l'application ---
-const float SEUIL_TENSION = 3; // Seuil de déclenchement (Volts)
+const float SEUIL_TENSION = 1; // Seuil de déclenchement (Volts)
 const int FREQUENCE_HZ = 20;     // Fréquence d'échantillonnage
 const long INTERVALLE_LECTURE = 1000 / FREQUENCE_HZ;
 
 const int SECONDES_PRE_TRIGGER = 1;  // Temps enregistré AVANT le seuil
-const int SECONDES_POST_TRIGGER = 2; // Temps enregistré APRES le seuil
+const int SECONDES_POST_TRIGGER = 3; // Temps enregistré APRES le seuil
 
 // Paramètres Heartbeat (Mesure de fond)
-const long INTERVALLE_VEILLE_SD = 3000; // Enregistrement calme toutes les 3s
+const long INTERVALLE_VEILLE_SD = 5000; // Enregistrement calme toutes les 5s
 
 // --- Calculs automatiques des tampons ---
 const int NB_ECH_PRE = SECONDES_PRE_TRIGGER * FREQUENCE_HZ;
@@ -220,15 +220,16 @@ void loop() {
     
     // Lecture pour affichage (indépendante du tampon)
     int16_t val = ads.readADC_SingleEnded(0); 
+    float tension_v = val * ADS1115_VOLT_PAR_BIT;
     char msg[16];
     
     if (etatActuel == VEILLE) {
-      snprintf(msg, sizeof(msg), "V: %d", val);
-      afficherMessageOLED("VEILLE", msg);
+        snprintf(msg, sizeof(msg), "V: %.2f V", tension_v); // Affichage avec 2 décimales
+        afficherMessageOLED("VEILLE", msg);
     } else if (etatActuel == CAPTURE_POST) {
-      afficherMessageOLED("ALERTE", "Enregistrement...");
+        afficherMessageOLED("ALERTE", "Enregistrement...");
     } else if (etatActuel == TRAITEMENT_SD) {
-      afficherMessageOLED("ECRITURE", "Sauvegarde...");
-    }
+        afficherMessageOLED("ECRITURE", "Sauvegarde...");
+  }
   }
 }
