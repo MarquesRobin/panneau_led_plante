@@ -20,6 +20,8 @@ unsigned long tempsPrecedentLecture = 0;
 unsigned long tempsPrecedentVeilleSD = 0;
 unsigned long tempsPrecedentAffichage = 0;
 const long INTERVALLE_AFFICHAGE = 1000; 
+float moyenne_haute = 0.0;
+float moyenne_basse = 0.0;
 
 enum Etat { VEILLE, CAPTURE_POST, TRAITEMENT_SD };
 Etat etatActuel = VEILLE;
@@ -100,6 +102,7 @@ void loop() {
 
     // --- BLOC 2 : SAUVEGARDE ---
     if (etatActuel == TRAITEMENT_SD) {
+        actualiserMetriqueRafale(tampon);  
         sauvegarderTamponSD(tampon, indexCourant); 
         etatActuel = VEILLE; 
         Serial.println("-> Retour immediat en mode VEILLE.");
