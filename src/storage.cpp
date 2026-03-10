@@ -47,7 +47,7 @@ void sauvegarderTamponSD(const int16_t* tampon, int indexCourant) {
         }
         dataFile.close();
         Serial.println("-> Sauvegarde terminée.");
-        afficherMessageOLED("SUCCES", "Rafale Sauvegardee");
+        afficher4LignesOLED("SUCCES", "Rafale Sauvegardee", "", "");
     } else {
         Serial.println("ERREUR SD (Rafale)");
     }

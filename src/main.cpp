@@ -34,17 +34,17 @@ void setup() {
     
     ads.setGain(GAIN_ONE); 
     if (!ads.begin()) { 
-        afficherMessageOLED("ERREUR", "ADS1115 HS");
+        afficher4LignesOLED("ERREUR", "ADS1115 HS", "", "");
         while(true);
     }
 
     spi.begin(); 
     if (!initialiserSD()) {
-        afficherMessageOLED("ERREUR", "SD HS"); 
+        afficher4LignesOLED("ERREUR", "SD HS", "", "");
         while(true); 
     }
 
-    afficherMessageOLED("PRET", "Systeme arme");
+    afficher4LignesOLED("PRET", "Systeme arme", "", "");
     Serial.println("SYSTEME PRET.");
 }
 
@@ -55,14 +55,15 @@ void loop() {
     // --- BLOC 1 : ACQUISITION ---
     if (tempsActuel - tempsPrecedentLecture >= INTERVALLE_LECTURE) {
         tempsPrecedentLecture = tempsActuel;
-        int16_t lecture_ads = ads.readADC_SingleEnded(0);
+        int16_t lecture_ads_0 = ads.readADC_SingleEnded(0);
+        int16_t lecture_ads_1 = ads.readADC_SingleEnded(1);
 
         switch (etatActuel) {
             case VEILLE:
-                tampon[indexCourant] = lecture_ads;
+                tampon[indexCourant] = lecture_ads_0;
                 indexCourant = (indexCourant + 1) % TAILLE_TOTALE;
 
-                if (lecture_ads >= (SEUIL_TENSION / ADS1115_VOLT_PAR_BIT)) {
+                if (lecture_ads_0 >= (SEUIL_TENSION / ADS1115_VOLT_PAR_BIT)) {
                     etatActuel = CAPTURE_POST;
                     echantillonsCapturesPost = 0;
                     Serial.println(">>> TRIGGER ! Passage en Capture Post <<<");
@@ -71,13 +72,13 @@ void loop() {
 
                 else if (tempsActuel - tempsPrecedentVeilleSD >= INTERVALLE_VEILLE_SD) {
                     tempsPrecedentVeilleSD = tempsActuel;
-                    ecritureSimple(tempsActuel, lecture_ads);
+                    ecritureSimple(tempsActuel, lecture_ads_0);
                 }
 
                 break;
 
             case CAPTURE_POST:
-                tampon[indexCourant] = lecture_ads;
+                tampon[indexCourant] = lecture_ads_0;
                 indexCourant = (indexCourant + 1) % TAILLE_TOTALE;
                 echantillonsCapturesPost++;
 
@@ -108,11 +109,11 @@ void loop() {
         
         if (etatActuel == VEILLE) {
             snprintf(msg, sizeof(msg), "V: %.2f V", tension_v); 
-            afficherMessageOLED("VEILLE", msg);
+            afficher4LignesOLED("VEILLE", msg, "Attente Trigger...", "");
         } else if (etatActuel == CAPTURE_POST) {
-            afficherMessageOLED("ALERTE", "Enregistrement...");
+            afficher4LignesOLED("ALERTE", "Enregistrement...", "", "");
         } else if (etatActuel == TRAITEMENT_SD) {
-            afficherMessageOLED("ECRITURE", "Sauvegarde...");
+            afficher4LignesOLED("ECRITURE", "Sauvegarde...", "", "");
         }
     }
 }

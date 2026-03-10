@@ -19,23 +19,28 @@ void initialiserOLED() {
     }
 }
 
-void afficherMessageOLED(const char* titre, const char* message) {
+void afficher4LignesOLED(const char* ligne1, const char* ligne2, const char* ligne3, const char* ligne4) {
     if (!ecranOLEDInitialise) return; 
     
     display.clearDisplay();
     
-    display.setTextSize(2);
-    display.setTextColor(SSD1306_WHITE);
-    int16_t x1, y1;
-    uint16_t w, h;
-    display.getTextBounds(titre, 0, 0, &x1, &y1, &w, &h);
-    display.setCursor((SCREEN_WIDTH - w) / 2, 5);
-    display.println(titre);
-
+    // Taille 1 obligatoire pour s'inscrire dans l'espacement de 16px
     display.setTextSize(1);
-    display.getTextBounds(message, 0, 0, &x1, &y1, &w, &h);
-    display.setCursor((SCREEN_WIDTH - w) / 2, 35);
-    display.println(message);
+    display.setTextColor(SSD1306_WHITE);
     
+    // Distribution linéaire sur l'axe Y des ordonnées
+    display.setCursor(0, 0);
+    display.println(ligne1);
+
+    display.setCursor(0, 16);
+    display.println(ligne2);
+
+    display.setCursor(0, 32);
+    display.println(ligne3);
+
+    display.setCursor(0, 48);
+    display.println(ligne4);
+    
+    // Transfert du tampon RAM vers le contrôleur matériel
     display.display();
 }
