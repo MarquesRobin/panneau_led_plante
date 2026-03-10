@@ -23,18 +23,18 @@ bool initialiserSD() {
     return true;
 }
 
-void ecritureSimple(unsigned long temps, int adc) {
+void ecritureSimple(unsigned long temps, int adc_0, int adc_1) {
     File dataFile = SD.open(NOM_FICHIER_SD, FILE_APPEND);
     if (dataFile) {
-        dataFile.printf("%lu,%d\n", temps, adc);
+        dataFile.printf("%lu,%d,%d\n", temps, adc_0, adc_1);
         dataFile.close();
-        Serial.printf("Fond -> %lu : %d\n", temps, adc);
+        Serial.printf("Fond -> %lu : %d,%d\n", temps, adc_0, adc_1);
     } else {
         Serial.println("ERREUR SD (Ecriture Simple)");
     }
 }
 
-void sauvegarderTamponSD(const int16_t* tampon, int indexCourant) {
+void sauvegarderTamponSD(int16_t tampon[][2], int indexCourant) {
     File dataFile = SD.open(NOM_FICHIER_SD, FILE_APPEND);
     if (dataFile) {
         unsigned long tempsFin = millis();
@@ -43,7 +43,7 @@ void sauvegarderTamponSD(const int16_t* tampon, int indexCourant) {
         for (int i = 0; i < TAILLE_TOTALE; i++) {
             int idx = (indexCourant + i) % TAILLE_TOTALE;
             unsigned long tempsEchantillon = tempsFin - ((TAILLE_TOTALE - 1 - i) * INTERVALLE_LECTURE);
-            dataFile.printf("%lu,%d\n", tempsEchantillon, tampon[idx]);
+            dataFile.printf("%lu,%d,%d\n", tempsEchantillon, tampon[idx][0], tampon[idx][1]);
         }
         dataFile.close();
         Serial.println("-> Sauvegarde terminée.");
