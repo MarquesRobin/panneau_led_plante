@@ -62,17 +62,18 @@ void loop() {
                 tampon[indexCourant] = lecture_ads;
                 indexCourant = (indexCourant + 1) % TAILLE_TOTALE;
 
-                if (tempsActuel - tempsPrecedentVeilleSD >= INTERVALLE_VEILLE_SD) {
-                    tempsPrecedentVeilleSD = tempsActuel;
-                    ecritureSimple(tempsActuel, lecture_ads);
-                }
-
                 if (lecture_ads >= (SEUIL_TENSION / ADS1115_VOLT_PAR_BIT)) {
                     etatActuel = CAPTURE_POST;
                     echantillonsCapturesPost = 0;
                     Serial.println(">>> TRIGGER ! Passage en Capture Post <<<");
+                    tempsPrecedentVeilleSD = tempsActuel;
                 }
-                
+
+                else if (tempsActuel - tempsPrecedentVeilleSD >= INTERVALLE_VEILLE_SD) {
+                    tempsPrecedentVeilleSD = tempsActuel;
+                    ecritureSimple(tempsActuel, lecture_ads);
+                }
+
                 break;
 
             case CAPTURE_POST:
