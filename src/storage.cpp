@@ -3,6 +3,7 @@
 #include <SD.h>
 #include <algorithm> // Requis pour std::sort
 #include "config.h"
+#include "display.h"
 
 extern SPIClass spi;
 
@@ -64,6 +65,9 @@ void ecritureSimple(unsigned long temps, int adc0, int adc1) {
     if (dataFile) {
         dataFile.printf("%lu,%d,%d,%.2f\n", temps, adc0, adc1, derniere_valeur_calculee);
         dataFile.close();
+    } else {
+        Serial.println("ERREUR: Impossible d'ouvrir le fichier SD (ecritureSimple)");
+        afficher4LignesOLED("ERREUR SD", "Ecriture simple", "echouee", "");
     }
 }
 
@@ -77,5 +81,8 @@ void sauvegarderTamponSD(int16_t tampon[][2], int indexCourant) {
             dataFile.printf("%lu,%d,%d,%.2f\n", tempsEchantillon, tampon[idx][0], tampon[idx][1], derniere_valeur_calculee);
         }
         dataFile.close();
+    } else {
+        Serial.println("ERREUR: Impossible d'ouvrir le fichier SD (sauvegarderTamponSD)");
+        afficher4LignesOLED("ERREUR SD", "Rafale perdue !", "", "");
     }
 }
