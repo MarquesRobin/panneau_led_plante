@@ -19,7 +19,9 @@ int echantillonsCapturesPost = 0;
 unsigned long tempsPrecedentLecture = 0;
 unsigned long tempsPrecedentVeilleSD = 0;
 unsigned long tempsPrecedentAffichage = 0;
-const long INTERVALLE_AFFICHAGE = 1000; 
+const long INTERVALLE_AFFICHAGE = 1000;
+int16_t derniere_lecture_0 = 0;
+int16_t derniere_lecture_1 = 0;
 float moyenne_haute = 0.0;
 float moyenne_basse = 0.0;
 
@@ -64,6 +66,8 @@ void loop() {
         tempsPrecedentLecture = tempsActuel;
         int16_t lecture_ads_0 = ads.readADC_SingleEnded(0);
         int16_t lecture_ads_1 = ads.readADC_SingleEnded(1);
+        derniere_lecture_0 = lecture_ads_0;
+        derniere_lecture_1 = lecture_ads_1;
 
         switch (etatActuel) {
             case VEILLE:
@@ -112,10 +116,8 @@ void loop() {
     if (tempsActuel - tempsPrecedentAffichage >= INTERVALLE_AFFICHAGE) {
         tempsPrecedentAffichage = tempsActuel;
         
-        int16_t val_0 = ads.readADC_SingleEnded(0); 
-        int16_t val_1 = ads.readADC_SingleEnded(1); 
-        float tension_v0 = val_0 * ADS1115_VOLT_PAR_BIT;
-        float tension_v1 = val_1 * ADS1115_VOLT_PAR_BIT;
+        float tension_v0 = derniere_lecture_0 * ADS1115_VOLT_PAR_BIT;
+        float tension_v1 = derniere_lecture_1 * ADS1115_VOLT_PAR_BIT;
 
         char msg_1[16];
         char msg_2[16];
