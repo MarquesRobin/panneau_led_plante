@@ -26,7 +26,7 @@ constexpr int POURCENTAGE_VALEURS_BASSES = 5;
 // ==============================================
 // CALCULS AUTOMATIQUES (Ne pas modifier)
 // ==============================================
-constexpr float ADS1115_VOLT_PAR_BIT = 0.000125;
+constexpr float ADS1115_VOLT_PAR_BIT = 0.0001875; // GAIN_TWOTHIRDS (±6.144V FSR, entrée max ~5V avec VDD=5V)
 constexpr long INTERVALLE_LECTURE = 1000 / FREQUENCE_HZ;
 constexpr int NB_ECH_PRE = SECONDES_PRE_TRIGGER * FREQUENCE_HZ;
 constexpr int NB_ECH_POST = SECONDES_POST_TRIGGER * FREQUENCE_HZ;

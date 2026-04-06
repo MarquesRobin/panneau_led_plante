@@ -11,7 +11,7 @@ float derniere_valeur_calculee = 0.0;
 
 // Fonction de calcul personnalisée
 float fonction_calcul(float val_1, float val_2) {
-    return val_1 + val_2; 
+    return (val_2 - val_1)/val_2;  
 }
 
 // Algorithme d'extraction et d'actualisation

@@ -36,7 +36,7 @@ void setup() {
     Wire.begin(21, 22); 
     initialiserOLED();
     
-    ads.setGain(GAIN_ONE); 
+    ads.setGain(GAIN_TWOTHIRDS); // Plage ±6.144V FSR, entrée max ~5V avec VDD=5V
     if (!ads.begin()) { 
         afficher4LignesOLED("ERREUR", "ADS1115 HS", "", "");
         while(true);
