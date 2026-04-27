@@ -8,3 +8,6 @@
 
 # Fiches techniques — droits d'auteur des fabricants, voir documentation/datasheets/sources.md
 documentation/datasheets/*.pdf
+
+# Fichiers verrou LibreOffice
+documentation/.~lock.*
