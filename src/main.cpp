@@ -28,8 +28,6 @@ float moyenne_basse = 0.0;
 enum Etat { VEILLE, CAPTURE_POST, TRAITEMENT_SD };
 Etat etatActuel = VEILLE;
 
-const int PIN_SORTIE_CARREE = 4;
-
 // ------------------- SETUP -------------------
 void setup() {
     Serial.begin(115200);
@@ -53,8 +51,6 @@ void setup() {
     afficher4LignesOLED("PRET", "Systeme arme", "", "");
     Serial.println("SYSTEME PRET.");
 
-    pinMode(PIN_SORTIE_CARREE, OUTPUT);
-    digitalWrite(PIN_SORTIE_CARREE, HIGH);
 }
 
 // ------------------- LOOP -------------------
