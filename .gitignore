@@ -5,3 +5,6 @@
 .vscode/ipch
 
 .fake
+
+# Fiches techniques — droits d'auteur des fabricants, voir documentation/datasheets/sources.md
+documentation/datasheets/*.pdf
