@@ -11,3 +11,10 @@ documentation/datasheets/*.pdf
 
 # Fichiers verrou LibreOffice
 documentation/.~lock.*
+
+# Fichiers temporaires et cache KiCad
+circuit/*autosave*
+circuit/*auto_saved*
+circuit/fp-info-cache
+circuit/*.kicad_prl
+circuit/*-backups/
