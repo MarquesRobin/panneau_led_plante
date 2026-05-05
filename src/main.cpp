@@ -6,137 +6,193 @@
 #include "config.h"
 #include "display.h"
 #include "storage.h"
+#include "encoder.h"
 
-// --- Objets Matériels Locaux ---
+// --- Objets matériels ---
 Adafruit_ADS1115 ads;
 SPIClass spi(VSPI);
 
-// --- Variables d'État Globale ---
+// --- Tampon circulaire ---
 int16_t tampon[TAILLE_TOTALE][2];
 int indexCourant = 0;
 int echantillonsCapturesPost = 0;
 
-unsigned long tempsPrecedentLecture = 0;
-unsigned long tempsPrecedentVeilleSD = 0;
+// --- Timestamps ---
+unsigned long tempsPrecedentLecture   = 0;
+unsigned long tempsPrecedentVeilleSD  = 0;
 unsigned long tempsPrecedentAffichage = 0;
 const long INTERVALLE_AFFICHAGE = 1000;
+
+// --- Dernières lectures ADC ---
 int16_t derniere_lecture_0 = 0;
 int16_t derniere_lecture_1 = 0;
-float moyenne_haute = 0.0;
-float moyenne_basse = 0.0;
 
+// --- Machine à états acquisition ---
 enum Etat { VEILLE, CAPTURE_POST, TRAITEMENT_SD };
 Etat etatActuel = VEILLE;
+
+// --- Mode principal ---
+enum ModePrincipal { MENU, MODE_AFFICHAGE, MODE_MANUEL, MODE_ACQUISITION };
+ModePrincipal modePrincipal = MENU;
+
+int selectionMenu       = 0;
+int pourcentageEnCours  = 0;
+int pourcentageApplique = 0;
 
 // ------------------- SETUP -------------------
 void setup() {
     Serial.begin(115200);
-    delay(500); 
+    delay(500);
 
-    Wire.begin(21, 22); 
+    Wire.begin(21, 22);
     initialiserOLED();
-    
-    ads.setGain(GAIN_TWOTHIRDS); // Plage ±6.144V FSR, entrée max ~5V avec VDD=5V
-    if (!ads.begin()) { 
+    initialiserEncoder();
+    dacWrite(PIN_DAC_SORTIE, 0);
+
+    ads.setGain(GAIN_TWOTHIRDS);
+    if (!ads.begin()) {
         afficher4LignesOLED("ERREUR", "ADS1115 HS", "", "");
-        while(true);
+        while (true);
     }
 
-    spi.begin(); 
+    spi.begin();
     if (!initialiserSD()) {
         afficher4LignesOLED("ERREUR", "SD HS", "", "");
-        while(true); 
+        while (true);
     }
 
-    afficher4LignesOLED("PRET", "Systeme arme", "", "");
+    afficherMenu(selectionMenu);
     Serial.println("SYSTEME PRET.");
-
 }
 
 // ------------------- LOOP -------------------
 void loop() {
     unsigned long tempsActuel = millis();
 
-    // --- BLOC 1 : ACQUISITION ---
-    if (tempsActuel - tempsPrecedentLecture >= INTERVALLE_LECTURE) {
+    // --- Lecture encodeur ---
+    mettreAJourBouton();
+    int  delta       = lireEncoderDelta();
+    bool courtPresse = boutonCourtPresse();
+    bool longPresse  = boutonLongPresse();
+
+    // --- Retour au menu (appui long) ---
+    if (longPresse && modePrincipal != MENU) {
+        modePrincipal = MENU;
+        etatActuel    = VEILLE;
+        afficherMenu(selectionMenu);
+        return;
+    }
+
+    // --- Bloc ADC (Affichage + Acquisition) ---
+    if ((modePrincipal == MODE_AFFICHAGE || modePrincipal == MODE_ACQUISITION) &&
+        (tempsActuel - tempsPrecedentLecture >= INTERVALLE_LECTURE)) {
+
         tempsPrecedentLecture = tempsActuel;
-        int16_t lecture_ads_0 = ads.readADC_SingleEnded(0);
-        int16_t lecture_ads_1 = ads.readADC_SingleEnded(1);
-        derniere_lecture_0 = lecture_ads_0;
-        derniere_lecture_1 = lecture_ads_1;
+        derniere_lecture_0 = ads.readADC_SingleEnded(0);
+        derniere_lecture_1 = ads.readADC_SingleEnded(1);
 
-        switch (etatActuel) {
-            case VEILLE:
-                tampon[indexCourant][0] = lecture_ads_0;
-                tampon[indexCourant][1] = lecture_ads_1;
-                indexCourant = (indexCourant + 1) % TAILLE_TOTALE;
+        // Machine à états uniquement en MODE_ACQUISITION
+        if (modePrincipal == MODE_ACQUISITION) {
+            switch (etatActuel) {
+                case VEILLE:
+                    tampon[indexCourant][0] = derniere_lecture_0;
+                    tampon[indexCourant][1] = derniere_lecture_1;
+                    indexCourant = (indexCourant + 1) % TAILLE_TOTALE;
 
-                if (lecture_ads_0 >= (SEUIL_TENSION / ADS1115_VOLT_PAR_BIT)) {
-                    etatActuel = CAPTURE_POST;
-                    echantillonsCapturesPost = 0;
-                    Serial.println(">>> TRIGGER ! Passage en Capture Post <<<");
-                    tempsPrecedentVeilleSD = tempsActuel;
-                }
+                    if (derniere_lecture_0 >= (SEUIL_TENSION / ADS1115_VOLT_PAR_BIT)) {
+                        etatActuel = CAPTURE_POST;
+                        echantillonsCapturesPost = 0;
+                        tempsPrecedentVeilleSD = tempsActuel;
+                        Serial.println(">>> TRIGGER ! Passage en Capture Post <<<");
+                    } else if (tempsActuel - tempsPrecedentVeilleSD >= INTERVALLE_VEILLE_SD) {
+                        tempsPrecedentVeilleSD = tempsActuel;
+                        ecritureSimple(tempsActuel, derniere_lecture_0, derniere_lecture_1);
+                    }
+                    break;
 
-                else if (tempsActuel - tempsPrecedentVeilleSD >= INTERVALLE_VEILLE_SD) {
-                    tempsPrecedentVeilleSD = tempsActuel;
-                    ecritureSimple(tempsActuel, lecture_ads_0, lecture_ads_1);
-                }
-                break;
+                case CAPTURE_POST:
+                    tampon[indexCourant][0] = derniere_lecture_0;
+                    tampon[indexCourant][1] = derniere_lecture_1;
+                    indexCourant = (indexCourant + 1) % TAILLE_TOTALE;
+                    echantillonsCapturesPost++;
+                    if (echantillonsCapturesPost >= NB_ECH_POST) etatActuel = TRAITEMENT_SD;
+                    break;
 
-            case CAPTURE_POST:
-                tampon[indexCourant][0] = lecture_ads_0;
-                tampon[indexCourant][1] = lecture_ads_1;
-                indexCourant = (indexCourant + 1) % TAILLE_TOTALE;
-                echantillonsCapturesPost++;
-
-                if (echantillonsCapturesPost >= NB_ECH_POST) {
-                    etatActuel = TRAITEMENT_SD;
-                }
-                break;
-            
-            case TRAITEMENT_SD:
-                break;
+                case TRAITEMENT_SD:
+                    break;
+            }
         }
     }
 
-    // --- BLOC 2 : SAUVEGARDE ---
-    if (etatActuel == TRAITEMENT_SD) {
-        actualiserMetriqueRafale(tampon);  
-        sauvegarderTamponSD(tampon, indexCourant); 
-        etatActuel = VEILLE; 
-        Serial.println("-> Retour immediat en mode VEILLE.");
+    // --- Logique par mode ---
+    switch (modePrincipal) {
+
+        case MENU:
+            if (delta != 0) {
+                selectionMenu = (selectionMenu + delta + 3) % 3;
+                afficherMenu(selectionMenu);
+            }
+            if (courtPresse) {
+                if (selectionMenu == 0) {
+                    modePrincipal = MODE_AFFICHAGE;
+                    tempsPrecedentAffichage = 0;
+                } else if (selectionMenu == 1) {
+                    modePrincipal = MODE_MANUEL;
+                    afficherModeManuel(pourcentageEnCours, pourcentageApplique);
+                } else {
+                    modePrincipal = MODE_ACQUISITION;
+                    etatActuel = VEILLE;
+                    indexCourant = 0;
+                    echantillonsCapturesPost = 0;
+                    tempsPrecedentVeilleSD  = tempsActuel;
+                    tempsPrecedentLecture   = tempsActuel;
+                    tempsPrecedentAffichage = 0;
+                }
+            }
+            break;
+
+        case MODE_AFFICHAGE:
+            break;
+
+        case MODE_MANUEL:
+            if (delta != 0) {
+                pourcentageEnCours = constrain(pourcentageEnCours + delta, 0, 100);
+                afficherModeManuel(pourcentageEnCours, pourcentageApplique);
+            }
+            if (courtPresse) {
+                pourcentageApplique = pourcentageEnCours;
+                dacWrite(PIN_DAC_SORTIE, map(pourcentageApplique, 0, 100, 0, 255));
+                afficherModeManuel(pourcentageEnCours, pourcentageApplique);
+            }
+            break;
+
+        case MODE_ACQUISITION:
+            if (etatActuel == TRAITEMENT_SD) {
+                actualiserMetriqueRafale(tampon);
+                sauvegarderTamponSD(tampon, indexCourant);
+                etatActuel = VEILLE;
+                Serial.println("-> Retour en VEILLE.");
+            }
+            break;
     }
 
-    // --- BLOC 3 : INTERFACE ---
-    if (tempsActuel - tempsPrecedentAffichage >= INTERVALLE_AFFICHAGE) {
+    // --- Affichage périodique (Affichage + Acquisition) ---
+    if ((modePrincipal == MODE_AFFICHAGE || modePrincipal == MODE_ACQUISITION) &&
+        (tempsActuel - tempsPrecedentAffichage >= INTERVALLE_AFFICHAGE)) {
+
         tempsPrecedentAffichage = tempsActuel;
-        
-        float tension_v0 = derniere_lecture_0 * ADS1115_VOLT_PAR_BIT;
-        float tension_v1 = derniere_lecture_1 * ADS1115_VOLT_PAR_BIT;
+        float v0 = derniere_lecture_0 * ADS1115_VOLT_PAR_BIT;
+        float v1 = derniere_lecture_1 * ADS1115_VOLT_PAR_BIT;
+        char msg_1[16], msg_2[16];
+        snprintf(msg_1, sizeof(msg_1), "V0: %.2f V", v0);
+        snprintf(msg_2, sizeof(msg_2), "V1: %.2f V", v1);
 
-        char msg_1[16];
-        char msg_2[16];
-        
-        if (etatActuel == VEILLE) {
-            snprintf(msg_1, sizeof(msg_1), "V0: %.2f V", tension_v0); 
-            snprintf(msg_2, sizeof(msg_2), "V1: %.2f V", tension_v1);
-
-            afficher4LignesOLED("MODE VEILLE", msg_1, msg_2, "");
-        } 
-        
-        else if (etatActuel == CAPTURE_POST) {
-            snprintf(msg_1, sizeof(msg_1), "V0: %.2f V", tension_v0); 
-            snprintf(msg_2, sizeof(msg_2), "V1: %.2f V", tension_v1);
-
-            afficher4LignesOLED("MODE RAFFALE", msg_1, msg_2, "");
-        } 
-        
-        else if (etatActuel == TRAITEMENT_SD) {
-            snprintf(msg_1, sizeof(msg_1), "V0: %.2f V", tension_v0); 
-            snprintf(msg_2, sizeof(msg_2), "V1: %.2f V", tension_v1);
-
-            afficher4LignesOLED("MODE ECRITURE", msg_1, msg_2, "");
+        if (modePrincipal == MODE_AFFICHAGE) {
+            afficher4LignesOLED("AFFICHAGE", msg_1, msg_2, "");
+        } else {
+            const char* etatStr = (etatActuel == VEILLE)       ? "VEILLE"   :
+                                  (etatActuel == CAPTURE_POST) ? "RAFALE"   : "ECRITURE";
+            afficher4LignesOLED(etatStr, msg_1, msg_2, "");
         }
     }
 }

@@ -8,6 +8,19 @@
 // --- Configuration Matérielle ---
 constexpr const char* NOM_FICHIER_SD = "/mes_donnees.csv";
 
+// --- Encodeur rotatif KY-040 ---
+constexpr int PIN_ENCODER_CLK = 32;
+constexpr int PIN_ENCODER_DT  = 33;
+constexpr int PIN_ENCODER_SW  = 27;
+constexpr int PIN_DAC_SORTIE  = 25;
+
+// --- Bouton : seuils temporels ---
+constexpr unsigned long SEUIL_APPUI_LONG    = 1000;  // ms
+constexpr unsigned long SEUIL_DEBOUNCE      = 50;    // ms
+
+// --- Encodeur : anti-rebond ISR ---
+constexpr unsigned long DEBOUNCE_ENCODER_US = 100000; // µs — 1 compte par clic mécanique
+
 // --- Paramètres de détection ---
 constexpr float SEUIL_TENSION = 3.0;         // Seuil de déclenchement (Volts)
 constexpr int FREQUENCE_HZ = 20;             // Vitesse d'acquisition (Mesures par seconde)
