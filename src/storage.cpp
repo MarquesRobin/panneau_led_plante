@@ -11,7 +11,7 @@ extern SPIClass spi;
 float derniere_valeur_calculee = 0.0;
 
 // Fonction de calcul personnalisée
-float fonction_calcul(float val_1, float val_2) {
+float fonction_calcul(float val_2, float val_1) {
     return (val_2 - val_1)/val_2;  
 }
 
@@ -53,7 +53,7 @@ bool initialiserSD() {
         File dataFile = SD.open(NOM_FICHIER_SD, FILE_WRITE); 
         if (dataFile) {
             // Ajout de la colonne Valeur_Calculee
-            dataFile.println("Temps_ms,ADC0,ADC1,Valeur_Calculee");
+            dataFile.println("Temps_ms,V0,V1,Valeur_Calculee");
             dataFile.close();
         }
     }
@@ -63,7 +63,9 @@ bool initialiserSD() {
 void ecritureSimple(unsigned long temps, int adc0, int adc1) {
     File dataFile = SD.open(NOM_FICHIER_SD, FILE_APPEND);
     if (dataFile) {
-        dataFile.printf("%lu,%d,%d,%.2f\n", temps, adc0, adc1, derniere_valeur_calculee);
+        float v0 = adc0 * ADS1115_VOLT_PAR_BIT;
+        float v1 = adc1 * ADS1115_VOLT_PAR_BIT;
+        dataFile.printf("%lu,%.4f,%.4f,%.4f\n", temps, v0, v1, derniere_valeur_calculee);
         dataFile.close();
     } else {
         Serial.println("ERREUR: Impossible d'ouvrir le fichier SD (ecritureSimple)");
@@ -78,7 +80,9 @@ void sauvegarderTamponSD(int16_t tampon[][2], int indexCourant) {
         for (int i = 0; i < TAILLE_TOTALE; i++) {
             int idx = (indexCourant + i) % TAILLE_TOTALE;
             unsigned long tempsEchantillon = tempsFin - ((TAILLE_TOTALE - 1 - i) * INTERVALLE_LECTURE);
-            dataFile.printf("%lu,%d,%d,%.2f\n", tempsEchantillon, tampon[idx][0], tampon[idx][1], derniere_valeur_calculee);
+            float v0 = tampon[idx][0] * ADS1115_VOLT_PAR_BIT;
+            float v1 = tampon[idx][1] * ADS1115_VOLT_PAR_BIT;
+            dataFile.printf("%lu,%.4f,%.4f,%.4f\n", tempsEchantillon, v0, v1, derniere_valeur_calculee);
         }
         dataFile.close();
     } else {
